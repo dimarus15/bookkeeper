@@ -1,6 +1,5 @@
 """
 Модуль содержит описание абстрактного репозитория
-
 Репозиторий реализует хранение объектов, присваивая каждому объекту уникальный
 идентификатор в атрибуте pk (primary key). Объекты, которые могут быть сохранены
 в репозитории, должны поддерживать добавление атрибута pk и не должны
@@ -8,6 +7,7 @@
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Generic, TypeVar, Protocol, Any
 
 
@@ -52,9 +52,28 @@ class AbstractRepository(ABC, Generic[T]):
         """
 
     @abstractmethod
+    def get_all_like(self, like: dict[str, str]) -> list[T]:
+        """
+        Получить все записи по некоторому условию
+        like - условие в виде словаря {'название_поля': значение},
+        где значение имеет тип строки и для выполнения условия должно 
+        содержаться внутри реального значения поля
+        """
+
+    @abstractmethod
     def update(self, obj: T) -> None:
         """ Обновить данные об объекте. Объект должен содержать поле pk. """
 
     @abstractmethod
     def delete(self, pk: int) -> None:
         """ Удалить запись """
+
+def repository_factory(repo_type: type, db_file=None) -> Callable[[Model], AbstractRepository]:
+    if db_file is None:
+        def repo_gen(model: Model) -> AbstractRepository:
+            return repo_type[model]()
+        return repo_gen
+    else:
+        def repo_gen(model: Model) -> AbstractRepository:
+            return repo_type[model](db_file=db_file, cls=model)
+        return repo_gen
